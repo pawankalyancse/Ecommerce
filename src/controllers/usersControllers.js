@@ -2,7 +2,6 @@ let userModel = require('../models/userModel')
 let generateOTP = require('../utils/otpGenerator')
 let sendOTP = require('../utils/mailSender')
 let jwt = require('jwt-simple')
-// let { encrypt } = require('../utils/encrytion')
 
 const registerUser = async (req, res) => {
     try {
