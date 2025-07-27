@@ -6,7 +6,6 @@ let jwt = require('jwt-simple')
 const registerUser = async (req, res) => {
     try {
         let { name, email, password } = req.body
-        console.log(req.body);
         let existingUser = await userModel.findOne({ email })
         if (existingUser?.verified) {
             return res.status(400).send({ message: "Email is already in use" })
@@ -58,7 +57,7 @@ const loginUser = async (req, res) => {
         if (!existingUser) {
             return res.status(401).send({ message: "Invalid credentials" })
         }
-        let token = jwt.encode({ email }, process.env.JWT_SECRET)
+        let token = jwt.encode({ email, time: new Date().getMilliseconds() }, process.env.JWT_SECRET)
         return res.status(200).send({ token })
     } catch (error) {
         return res.status(500).send({ message: error.message || "Error while login" })
@@ -83,6 +82,15 @@ const fetchUser = async (req, res) => {
         return res.status(500).send({ message: error.message || "Error while fetching" })        
     }
 }
+
+// const createUser = async (req, res) => {
+//     try {
+//         let user = req.body
+//         userModel.create(user)
+//     } catch (error) {
+        
+//     }
+// }
 
 module.exports = {
     registerUser,
