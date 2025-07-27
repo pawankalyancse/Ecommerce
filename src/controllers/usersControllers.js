@@ -74,9 +74,20 @@ const fetchUsers = async (req, res) => {
     }
 }
 
+const fetchUser = async (req, res) => {
+    try {
+        const { id } = req.params
+        let user = await userModel.findById(id)
+        return res.status(200).send(user)
+    } catch (error) {
+        return res.status(500).send({ message: error.message || "Error while fetching" })        
+    }
+}
+
 module.exports = {
     registerUser,
     verifyUser,
     loginUser,
-    fetchUsers
+    fetchUsers,
+    fetchUser
 }
