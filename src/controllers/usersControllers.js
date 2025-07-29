@@ -1,7 +1,7 @@
 let userModel = require('../models/userModel')
 let generateOTP = require('../utils/otpGenerator')
 let sendOTP = require('../utils/mailSender')
-let jwt = require('jwt-simple')
+let jwt = require('jsonwebtoken')
 
 const registerUser = async (req, res) => {
     try {
@@ -57,7 +57,8 @@ const loginUser = async (req, res) => {
         if (!existingUser) {
             return res.status(401).send({ message: "Invalid credentials" })
         }
-        let token = jwt.encode({ email, time: new Date().getMilliseconds() }, process.env.JWT_SECRET)
+        // let token = jwt.encode({ email, time: new Date().getMilliseconds() }, process.env.JWT_SECRET)
+        let token = jwt.sign({email}, process.env.JWT_SECRET, {expiresIn: "1 Hour"})
         return res.status(200).send({ token })
     } catch (error) {
         return res.status(500).send({ message: error.message || "Error while login" })
