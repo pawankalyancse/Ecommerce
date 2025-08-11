@@ -1,7 +1,5 @@
 let jwt = require("jsonwebtoken")
 let userModel = require('../models/userModel')
-const MS_IN_ONE_DAY = 24 * 60 * 60 * 1000
-
 
 const isAuthenticated = async (req, res, next) => {
     // console.log(req.headers);
@@ -16,13 +14,12 @@ const isAuthenticated = async (req, res, next) => {
         return res.status(400).send({ message: "Bearer token is required" })
     }
     try {
-        let [_, token] = splits 
-        let {email} = jwt.verify(token, process.env.JWT_SECRET)
-        let existingUser = await userModel.findOne({email, verified : true})
-        if (!existingUser) {
-            throw new Error("User is not authenticated");
+        let [_, token] = splits
+        let options = {
+            subject: "User login",
+            issuer: "Ecommerce website"
         }
-        req.user = existingUser
+        req.user = jwt.verify(token, process.env.JWT_SECRET, options)
         next()
     } catch (error) {
         return res.status(401).send({ message: "User is not authenticated" })
