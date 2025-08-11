@@ -3,7 +3,7 @@ let generateOTP = require('../utils/otpGenerator')
 let sendOTP = require('../utils/mailSender')
 let jwt = require('jsonwebtoken')
 
-const registerUser = async (req, res) => {
+const registerUser = async (req, res, next) => {
     try {
         let { name, email, password } = req.body
         let existingUser = await userModel.findOne({ email })
@@ -24,11 +24,12 @@ const registerUser = async (req, res) => {
         await sendOTP(email, freshOTP);
         return res.status(200).send({ message: "Registration successful. Please verify your email with the OTP sent" })
     } catch (error) {
-        return res.status(500).send({ message: error.message || "Error while processing request" })
+        next(error)
+        // return res.status(500).send({ message: error.message || "Error while processing request" })
     }
 }
 
-const verifyUser = async (req, res) => {
+const verifyUser = async (req, res, next) => {
     try {
         let { otp, email } = req.body
         let existingUser = await userModel.findOne({ email })
@@ -46,57 +47,70 @@ const verifyUser = async (req, res) => {
         }
         return res.status(404).send({ message: "Invalid OTP" })
     } catch (error) {
-        return res.status(500).send({ message: error.message || "Error while processing request" })
+        next(error)
+        // return res.status(500).send({ message: error.message || "Error while processing request" })
     }
 }
 
-const loginUser = async (req, res) => {
+const loginUser = async (req, res, next) => {
     try {
         let { email, password } = req.body
-        let existingUser = await userModel.findOne({ email, password, verified: true })
-        if (!existingUser) {
+        let userDetails = await userModel.findOne({ email, password, verified: true })
+        if (!userDetails) {
             return res.status(401).send({ message: "Invalid credentials" })
         }
-        // let token = jwt.encode({ email, time: new Date().getMilliseconds() }, process.env.JWT_SECRET)
-        let token = jwt.sign({email}, process.env.JWT_SECRET, {expiresIn: "1 Hour"})
+        let payload = {
+            id: userDetails._id,
+            role: userDetails.role
+        }
+        let options = {
+            subject: "User login",
+            issuer: "Ecommerce website",
+            audience: userDetails._id.toString(),
+            expiresIn: "1 Hr",
+        }
+        let token = jwt.sign(payload, process.env.JWT_SECRET, options)
         return res.status(200).send({ token })
     } catch (error) {
-        return res.status(500).send({ message: error.message || "Error while login" })
+        next(error)
+        // return res.status(500).send({ message: error.message || "Error while login" })
     }
 }
 
-const fetchUsers = async (req, res) => {
+const fetchUsers = async (req, res, next) => {
     try {
-        let users = await userModel.find({}, { password: 0, OTP: 0 })
+        let users = await userModel.find({}, { password: 0, OTP: 0, cart: 0})
         return res.status(200).send(users)
     } catch (error) {
         return res.status(500).send({ message: error.message || "Error while fetching" })
     }
 }
 
-const fetchUser = async (req, res) => {
+const fetchUser = async (req, res, next) => {
     try {
         const { id } = req.params
-        let user = await userModel.findById(id)
+        let user = await userModel.findById(id, {password: 0, OTP: 0, cart: 0})
         return res.status(200).send(user)
     } catch (error) {
-        return res.status(500).send({ message: error.message || "Error while fetching" })        
+        next(error)
+        // return res.status(500).send({ message: error.message || "Error while fetching" })
     }
 }
 
-// const createUser = async (req, res) => {
-//     try {
-//         let user = req.body
-//         userModel.create(user)
-//     } catch (error) {
+const getCurrentUser = async (req, res, next) => {
+    try {
+        let user = await userModel.findById(req.user.id, {password: 0, OTP: 0}).populate("cart.product").exec()
+        return res.status(200).send(user)
+    } catch (error) {
+        next(error)
         
-//     }
-// }
-
+    }
+}
 module.exports = {
     registerUser,
     verifyUser,
     loginUser,
     fetchUsers,
-    fetchUser
+    fetchUser,
+    getCurrentUser
 }
