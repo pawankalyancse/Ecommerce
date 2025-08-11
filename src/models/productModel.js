@@ -28,8 +28,8 @@ let productSchema = new mongoose.Schema({
     sizes: {
         type: Array,
         validate: {
-            validator: function (values) {
-                console.log(typeof values, values);
+            validator: (values) => {
+                // console.log(typeof values, values);
                 return Array.isArray(values) &&
                     values.length > 0 &&
                     values.every((value) => ["S", "M", "L", "XL", "XXL", "XXXL"].includes(value))

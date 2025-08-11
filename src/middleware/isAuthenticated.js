@@ -1,28 +1,26 @@
-let jwt = require("jwt-simple")
+let jwt = require("jsonwebtoken")
 let userModel = require('../models/userModel')
-
 
 const isAuthenticated = async (req, res, next) => {
     // console.log(req.headers);
     let { authorization } = req.headers
     if (!authorization) {
-        return res.status(404).send({ message: "Auth token is required" })
+        return res.status(400).send({ message: "Auth token is required" })
     }
-    let parts = authorization?.split(" ")
-    if (!Array.isArray(parts)
-        || parts.length !== 2
-        || parts[0] !== "Bearer") {
+    let splits = authorization?.split(" ")
+    if (!Array.isArray(splits)
+        || splits.length !== 2
+        || splits[0] !== "Bearer") {
         return res.status(400).send({ message: "Bearer token is required" })
     }
     try {
-        let { email } = jwt.decode(parts[1], process.env.JWT_SECRET)
-        let existingUser = await userModel.findOne({ email, verified: true })
-        if (existingUser) {
-            req.user = existingUser
-            return next()
+        let [_, token] = splits
+        let options = {
+            subject: "User login",
+            issuer: "Ecommerce website"
         }
-        throw new Error("unauthorized");
-
+        req.user = jwt.verify(token, process.env.JWT_SECRET, options)
+        next()
     } catch (error) {
         return res.status(401).send({ message: "User is not authenticated" })
     }

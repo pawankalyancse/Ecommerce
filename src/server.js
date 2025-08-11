@@ -2,9 +2,8 @@ require('dotenv').config()
 let express = require('express')
 let connectDB = require('./db')
 let cors = require('cors')
-let userRoutes = require('./routes/userRoutes')
 
-let productRoutes = require('./routes/productRoutes')
+let router = require('./routes')
 
 
 let app = express()
@@ -28,11 +27,13 @@ app.use(cors({
 }))
 
 // register routes
-app.use('/user', userRoutes)
-app.use('/product', productRoutes)
+app.use(router)
 
 
-app.use((req, res) => {
+app.use((err, req, res, next) => {
+    if (err) {
+        return res.status(500).send({message : err.message || "Internal Server Error"})
+    }
     return res.sendStatus(404)
 })
 

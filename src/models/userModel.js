@@ -1,5 +1,18 @@
 let mongoose = require('mongoose')
 
+let cartSchema = new mongoose.Schema({
+    product: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref: "Product",
+    },
+    quantity: {
+        type: Number,
+        required: true,
+        min: 1
+    }
+})
+
 let userSchema = new mongoose.Schema({
     name: {
         type: String,
@@ -22,18 +35,23 @@ let userSchema = new mongoose.Schema({
         default: 'user',
         enum: ['admin', 'user']
     },
-    verified:{
+    verified: {
         type: Boolean,
         default: false
     },
-    OTP:{
+    OTP: {
         type: String,
+    },
+
+    cart: {
+        type: [cartSchema],
+        default: [],
     }
 },
-{
-    timestamps: true,
-    collection: 'Users'
-})
+    {
+        timestamps: true,
+        collection: 'Users'
+    })
 
-let userModel = mongoose.model('User',userSchema,'Users')
+let userModel = mongoose.model('User', userSchema, 'Users')
 module.exports = userModel
