@@ -1,8 +1,8 @@
 let userModel = require('../models/userModel')
 let generateOTP = require('../utils/otpGenerator')
-let sendOTP = require('../utils/mailSender')
 let jwt = require('jsonwebtoken')
-
+const { pushToKafka } = require('../../kafka');
+const { SIGNIN_VERIFY, SIGNIN_SUCCESS } = require('../../constants');
 const registerUser = async (req, res, next) => {
     try {
         let { name, email, password } = req.body
@@ -21,7 +21,10 @@ const registerUser = async (req, res, next) => {
         } else {
             await userModel.create({ name, email, password, OTP: freshOTP })
         }
-        await sendOTP(email, freshOTP);
+        // await sendOTP(email, freshOTP);
+
+        pushToKafka(SIGNIN_VERIFY, [{ email, otp: freshOTP }])
+
         return res.status(200).send({ message: "Registration successful. Please verify your email with the OTP sent" })
     } catch (error) {
         next(error)
@@ -32,7 +35,7 @@ const registerUser = async (req, res, next) => {
 const verifyUser = async (req, res, next) => {
     try {
         let { otp, email } = req.body
-        let existingUser = await userModel.findOne({ email })
+        let existingUser = await userModel.findOne({ email }, { password: 0 })
         if (!existingUser) {
             return res.status(404).send({ message: 'Email Not Registered' })
         }
@@ -43,6 +46,9 @@ const verifyUser = async (req, res, next) => {
                 {
                     $set: { verified: true }
                 })
+            // send welcome email
+            pushToKafka(SIGNIN_SUCCESS, [existingUser])
+
             return res.status(200).send({ message: "User verified successfully" })
         }
         return res.status(404).send({ message: "Invalid OTP" })
@@ -79,7 +85,7 @@ const loginUser = async (req, res, next) => {
 
 const fetchUsers = async (req, res, next) => {
     try {
-        let users = await userModel.find({}, { password: 0, OTP: 0, cart: 0})
+        let users = await userModel.find({}, { password: 0, OTP: 0, cart: 0 })
         return res.status(200).send(users)
     } catch (error) {
         return res.status(500).send({ message: error.message || "Error while fetching" })
@@ -89,7 +95,7 @@ const fetchUsers = async (req, res, next) => {
 const fetchUser = async (req, res, next) => {
     try {
         const { id } = req.params
-        let user = await userModel.findById(id, {password: 0, OTP: 0, cart: 0})
+        let user = await userModel.findById(id, { password: 0, OTP: 0, cart: 0 })
         return res.status(200).send(user)
     } catch (error) {
         next(error)
@@ -99,18 +105,41 @@ const fetchUser = async (req, res, next) => {
 
 const getCurrentUser = async (req, res, next) => {
     try {
-        let user = await userModel.findById(req.user.id, {password: 0, OTP: 0}).populate("cart.product").exec()
+        let user = await userModel.findById(req.user.id, { password: 0, OTP: 0 }).populate("cart.product").exec()
         return res.status(200).send(user)
     } catch (error) {
         next(error)
-        
+
     }
 }
+
+const deleteUser = async (req, res, next) => {
+    try {
+        const { id: userId } = req.params;
+        await userModel.findByIdAndDelete(userId)
+        return res.sendStatus(200)
+    } catch (error) {
+        next(error)
+    }
+}
+
+const deleteUsers = async (req, res, next) => {
+    try {
+        const ids = req.query.ids?.split(',').map(id => id.trim());
+        const results = await userModel.deleteMany({ _id: { $in: ids } });
+        return res.send(results)
+    } catch (error) {
+        next(error)
+    }
+}
+
 module.exports = {
     registerUser,
     verifyUser,
     loginUser,
     fetchUsers,
     fetchUser,
-    getCurrentUser
+    getCurrentUser,
+    deleteUser,
+    deleteUsers
 }
