@@ -9,24 +9,25 @@ let router = require('./routes')
 let app = express()
 const PORT = 1818
 
-
-
-// middleware
-app.use(express.json())
-
-// connect to DB
-app.use(async (req, res, next) => {
-    await connectDB()
-    next()
-})
-
+// 1. cors middleware
 app.use(cors({
     origin: ["http://localhost:5500"],
     methods: ["POST", "GET", "PUT", "DELETE"],
     credentials: true
 }))
 
-// register routes
+// 2. body parser middleware
+app.use(express.json())
+
+
+// 3. connect to DB (if not connected)
+app.use(async (req, res, next) => {
+    await connectDB()
+    next()
+})
+
+
+// 4. register routes
 app.use(router)
 
 
