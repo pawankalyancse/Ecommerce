@@ -9,23 +9,13 @@ const transporter = nodemailer.createTransport({
 });
 
 const sendOTP = async (email, OTP) => {
-    return new Promise((resolve, reject) => {
-        const mailOptions = {
-            from: `Ecommerce Website ${process.env.GMAIL_ID}`,
-            to: email,
-            subject: 'Ecommerce signup OTP',
-            text: `Your OTP is ${OTP}`
-        }
-        const callback = (err) => {
-            if (err) {
-                reject(err)
-            }
-            else {
-                resolve()
-            }
-        }
-        transporter.sendMail(mailOptions, callback);
-    })
+    const mailOptions = {
+        from: `Ecommerce Website ${process.env.GMAIL_ID}`,
+        to: email,
+        subject: 'Ecommerce signup OTP',
+        text: `Your OTP is ${OTP}`
+    }
+    await transporter.sendMail(mailOptions);
 }
 
 module.exports = sendOTP
