@@ -1,7 +1,8 @@
 let userModel = require('../models/userModel')
 let generateOTP = require('../utils/otpGenerator')
 let jwt = require('jsonwebtoken')
-const { pushToKafka } = require('../../kafka');
+// const { pushToKafka } = require('../../kafka');
+const { publishDataToChannel } = require('../../redis');
 const { SIGNIN_VERIFY, SIGNIN_SUCCESS } = require('../../constants');
 const registerUser = async (req, res, next) => {
     try {
@@ -23,7 +24,9 @@ const registerUser = async (req, res, next) => {
         }
         // await sendOTP(email, freshOTP);
 
-        pushToKafka(SIGNIN_VERIFY, [{ email, otp: freshOTP }])
+        // pushToKafka(SIGNIN_VERIFY, [{ email, otp: freshOTP }])
+
+        publishDataToChannel(SIGNIN_VERIFY, { email, otp: freshOTP });
 
         return res.status(200).send({ message: "Registration successful. Please verify your email with the OTP sent" })
     } catch (error) {
@@ -47,7 +50,8 @@ const verifyUser = async (req, res, next) => {
                     $set: { verified: true }
                 })
             // send welcome email
-            pushToKafka(SIGNIN_SUCCESS, [existingUser])
+            // pushToKafka(SIGNIN_SUCCESS, [existingUser])
+            publishDataToChannel(SIGNIN_SUCCESS, existingUser)
 
             return res.status(200).send({ message: "User verified successfully" })
         }

@@ -1,5 +1,6 @@
 const nodemailer = require('nodemailer');
-const { createConsumer } = require('../kafka');
+// const { createConsumer } = require('../kafka');
+const { subscribeToChannel } = require('../redis');
 const { SIGNIN_VERIFY, SIGNIN_SUCCESS } = require('../constants');
 require('dotenv').config();
 
@@ -11,18 +12,34 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-const sendEmail = async (payload) => {
-
+const handleKafkaMessage = async (payload) => {
     try {
         console.dir(payload);
         const { topic, message } = payload;
+        const data = JSON.parse(message.value);
+        console.dir(data);
+        return sendEmail(data, topic);
+    } catch (error) {
+        console.error('Failed to parse kafka message with error %s', error.message);
+    }
+}
+
+const handleRedisSubMessage = async (message, channel) => {
+    try {
+        const data = JSON.parse(message);
+        console.log('☀️  Recieved message from redis pub/sub from channel %s', channel);
+        console.log(data);
+        return sendEmail(data, channel);
+    } catch (error) {
+        console.error('Failed to parse kafka message with error %s', error.message);
+    }
+}
+
+const sendEmail = async (data, topic) => {
+    try {
         const mailOptions = {
             from: `Ecommerce Website ${process.env.GMAIL_ID}`,
         }
-
-        const data = JSON.parse(message.value);
-
-        console.dir(data);
 
         if (topic === SIGNIN_VERIFY) {
             const { email, otp } = data;
@@ -39,6 +56,7 @@ const sendEmail = async (payload) => {
             return
         }
         await transporter.sendMail(mailOptions);
+        console.log('✅ Sent mail to %s', mailOptions.to);
     } catch (error) {
         console.error('Failed to send email', error);
     }
@@ -47,8 +65,9 @@ const sendEmail = async (payload) => {
 
 const onStart = async () => {
     try {
-        await createConsumer("notification-service",
-            [SIGNIN_VERIFY, SIGNIN_SUCCESS], sendEmail, true)
+        // await createConsumer("notification-service",
+        //     [SIGNIN_VERIFY, SIGNIN_SUCCESS], handleKafkaMessage, true)
+        await subscribeToChannel([SIGNIN_VERIFY, SIGNIN_SUCCESS], handleRedisSubMessage);
     } catch (error) {
         console.error(error);
     }
