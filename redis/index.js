@@ -1,21 +1,17 @@
+"use strict"
 const redis = require('redis');
 
 const redisClient = redis.createClient({
     url: 'redis://localhost:6379'
 });
 
-const pubClient = redis.createClient({
-    url: 'redis://localhost:6379'
-});
-
-const subClient = redis.createClient({
+const pubSubClient = redis.createClient({
     url: 'redis://localhost:6379'
 });
 
 (async () => {
     await redisClient.connect();
-    await pubClient.connect();
-    await subClient.connect();
+    await pubSubClient.connect();
     console.log('✅ Redis clients connected');
 })();
 
@@ -50,7 +46,7 @@ const clearCache = async (key) => {
 const publishDataToChannel = async (channel, message) => {
     try {
         if(typeof message === 'object') message = JSON.stringify(message);
-        await pubClient.publish(channel, message);
+        await pubSubClient.publish(channel, message);
     } catch (error) {
         console.error("Failed to publish message to channel %s with error %s", channel, error.message);
     }
@@ -58,9 +54,9 @@ const publishDataToChannel = async (channel, message) => {
 
 const subscribeToChannel = async (channels, callback) => {
     try {
-        await subClient.subscribe(channels, callback);
+        await pubSubClient.subscribe(channels, callback);
     } catch (error) {
-        console.error("Failed to subscribe to channel %s with error %s", channel, error.message);
+        console.error("Failed to subscribe to channel %s with error %s", channels, error.message);
     }
 }
 
