@@ -1,6 +1,7 @@
 const nodemailer = require('nodemailer');
 // const { createConsumer } = require('../kafka');
-const { subscribeToChannel } = require('../redis');
+// const { subscribeToChannel } = require('../redis');
+const { processJob } = require('./notificationQueue')
 const { SIGNIN_VERIFY, SIGNIN_SUCCESS } = require('../constants');
 require('dotenv').config();
 
@@ -35,6 +36,17 @@ const handleRedisSubMessage = async (message, channel) => {
     }
 }
 
+const handleNotificationQueueJob = async (job) => {
+    try {
+        const { data } = job;
+        const { topic } = data
+        console.log('☀️  Recieved job for notification queue for topic %s', topic);
+        sendEmail(data, topic)
+    } catch (error) {
+        console.error('Failed to parse notification queue message with error %s', error.message);
+    }
+}
+
 const sendEmail = async (data, topic) => {
     try {
         const mailOptions = {
@@ -46,6 +58,7 @@ const sendEmail = async (data, topic) => {
             mailOptions.to = email;
             mailOptions.subject = 'Ecommerce signup OTP';
             mailOptions.text = `Your OTP is ${otp}`
+            console.log(`OTP is ${otp}`)
         } else if (topic === SIGNIN_SUCCESS) {
             const { name, email } = data;
             mailOptions.to = email;
@@ -67,7 +80,11 @@ const onStart = async () => {
     try {
         // await createConsumer("notification-service",
         //     [SIGNIN_VERIFY, SIGNIN_SUCCESS], handleKafkaMessage, true)
-        await subscribeToChannel([SIGNIN_VERIFY, SIGNIN_SUCCESS], handleRedisSubMessage);
+
+        // await subscribeToChannel([SIGNIN_VERIFY, SIGNIN_SUCCESS], handleRedisSubMessage);
+
+        await processJob(handleNotificationQueueJob)
+        console.log("✅ Notification service has started");
     } catch (error) {
         console.error(error);
     }

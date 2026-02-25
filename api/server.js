@@ -2,16 +2,21 @@ require('dotenv').config()
 let express = require('express')
 let connectDB = require('./db')
 let cors = require('cors')
+const { graphqlHTTP } = require('express-graphql');
+const schema = require('./graphQL')
 
 let router = require('./routes')
 
 
 let app = express()
 const PORT = 1818
+// const ALLOWED_ORIGINS = ["http://localhost:5500"]
+const ALLOWED_ORIGINS = '*'
+
 
 // 1. cors middleware
 app.use(cors({
-    origin: ["http://localhost:5500"],
+    origin: ALLOWED_ORIGINS,
     methods: ["POST", "GET", "PUT", "DELETE"],
     credentials: true
 }))
@@ -28,12 +33,16 @@ app.use(async (req, res, next) => {
 
 
 // 4. register routes
+app.use('/graphql', graphqlHTTP({
+    schema,
+    graphiql: true
+}))
 app.use(router)
 
 
 app.use((err, req, res, next) => {
     if (err) {
-        return res.status(500).send({message : err.message || "Internal Server Error"})
+        return res.status(500).send({ message: err.message || "Internal Server Error" })
     }
     return res.sendStatus(404)
 })

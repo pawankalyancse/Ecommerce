@@ -2,8 +2,11 @@ let userModel = require('../models/userModel')
 let generateOTP = require('../utils/otpGenerator')
 let jwt = require('jsonwebtoken')
 // const { pushToKafka } = require('../../kafka');
-const { publishDataToChannel } = require('../../redis');
+// const { publishDataToChannel } = require('../../redis');
+const { addJob } = require('../../notifications/notificationQueue')
 const { SIGNIN_VERIFY, SIGNIN_SUCCESS } = require('../../constants');
+
+
 const registerUser = async (req, res, next) => {
     try {
         let { name, email, password } = req.body
@@ -26,7 +29,9 @@ const registerUser = async (req, res, next) => {
 
         // pushToKafka(SIGNIN_VERIFY, [{ email, otp: freshOTP }])
 
-        publishDataToChannel(SIGNIN_VERIFY, { email, otp: freshOTP });
+        // publishDataToChannel(SIGNIN_VERIFY, { email, otp: freshOTP });
+
+        addJob({ email, otp : freshOTP, topic: SIGNIN_VERIFY })
 
         return res.status(200).send({ message: "Registration successful. Please verify your email with the OTP sent" })
     } catch (error) {
@@ -35,10 +40,12 @@ const registerUser = async (req, res, next) => {
     }
 }
 
+
+
 const verifyUser = async (req, res, next) => {
     try {
         let { otp, email } = req.body
-        let existingUser = await userModel.findOne({ email }, { password: 0 })
+        let existingUser = await userModel.findOne({ email }, { password: 0 }).lean()
         if (!existingUser) {
             return res.status(404).send({ message: 'Email Not Registered' })
         }
@@ -51,7 +58,10 @@ const verifyUser = async (req, res, next) => {
                 })
             // send welcome email
             // pushToKafka(SIGNIN_SUCCESS, [existingUser])
-            publishDataToChannel(SIGNIN_SUCCESS, existingUser)
+
+            // publishDataToChannel(SIGNIN_SUCCESS, existingUser)
+
+            addJob({topic : SIGNIN_SUCCESS, ...existingUser})
 
             return res.status(200).send({ message: "User verified successfully" })
         }
