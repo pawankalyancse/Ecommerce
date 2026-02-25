@@ -46,7 +46,7 @@ let orderSchema = new mongoose.Schema({
     },
     totalAmount : {
         type : Number,
-        required : true
+        required : true,
     }
 }, {
     timestamps : true,
